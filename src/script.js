@@ -1,105 +1,88 @@
 import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RectAreaLightHelper } from "three/examples/jsm/helpers/RectAreaLightHelper"
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib"
+
 import * as dat from 'dat.gui'
 
 // Debug
 const gui = new dat.GUI()
 
-// Canvas
-const canvas = document.querySelector('canvas.webgl')
+let renderer, scene, camera;
+init();
 
-// Scene
-const scene = new THREE.Scene()
+function init() {
 
-// Objects
-const geometry = new THREE.TorusGeometry( .7, .2, 16, 100 );
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setAnimationLoop( animation );
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    document.body.appendChild( renderer.domElement );
 
-// Materials
+    camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+    camera.position.set( 0, 5, - 15 );
 
-const material = new THREE.MeshBasicMaterial()
-material.color = new THREE.Color(0xff0000)
+    scene = new THREE.Scene();
 
-// Mesh
-const sphere = new THREE.Mesh(geometry,material)
-scene.add(sphere)
+    const textureLoader = new THREE.TextureLoader();
+    const normalTexture = textureLoader.load('/textures/texture.png');
 
-// Lights
+    RectAreaLightUniformsLib.init();
 
-const pointLight = new THREE.PointLight(0xffffff, 0.1)
-pointLight.position.x = 2
-pointLight.position.y = 3
-pointLight.position.z = 4
-scene.add(pointLight)
+    const rectLight1 = new THREE.RectAreaLight( 0xff0000, 5, 4, 10 );
+    rectLight1.position.set( - 5, 5, 5 );
+    scene.add( rectLight1 );
 
-/**
- * Sizes
- */
-const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
+    const rectLight2 = new THREE.RectAreaLight( 0x00ff00, 5, 4, 10 );
+    rectLight2.position.set( 0, 5, 5 );
+    scene.add( rectLight2 );
+
+    const rectLight3 = new THREE.RectAreaLight( 0x0000ff, 5, 4, 10 );
+    rectLight3.position.set( 5, 5, 5 );
+    scene.add( rectLight3 );
+
+    scene.add( new RectAreaLightHelper( rectLight1 ) );
+    scene.add( new RectAreaLightHelper( rectLight2 ) );
+    scene.add( new RectAreaLightHelper( rectLight3 ) );
+
+    const geoFloor = new THREE.BoxGeometry( 2000, 0.1, 2000 );
+    const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x808080, roughness: 0.1, metalness: 0 } );
+    const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
+    scene.add( mshStdFloor );
+
+    const geoKnot = new THREE.TorusKnotGeometry( 1.5, 0.5, 200, 16 );
+    const matKnot = new THREE.MeshStandardMaterial( { color: 0xffffff, roughness: 0, metalness: 0 } );
+    matKnot.normalMap = normalTexture;
+    const meshKnot = new THREE.Mesh( geoKnot, matKnot );
+    meshKnot.name = 'meshKnot';
+    meshKnot.position.set( 0, 5, 0 );
+    scene.add( meshKnot );
+
+    const controls = new OrbitControls( camera, renderer.domElement );
+    controls.target.copy( meshKnot.position );
+    controls.update();
+
+    //
+
+    window.addEventListener( 'resize', onWindowResize );
+
 }
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+function onWindowResize() {
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    camera.aspect = ( window.innerWidth / window.innerHeight );
+    camera.updateProjectionMatrix();
 
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
-
-/**
- * Camera
- */
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 0
-camera.position.y = 0
-camera.position.z = 2
-scene.add(camera)
-
-// Controls
-// const controls = new OrbitControls(camera, canvas)
-// controls.enableDamping = true
-
-/**
- * Renderer
- */
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
-/**
- * Animate
- */
-
-const clock = new THREE.Clock()
-
-const tick = () =>
-{
-
-    const elapsedTime = clock.getElapsedTime()
-
-    // Update objects
-    sphere.rotation.y = .5 * elapsedTime
-
-    // Update Orbital Controls
-    // controls.update()
-
-    // Render
-    renderer.render(scene, camera)
-
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
 }
 
-tick()
+function animation( time ) {
+
+    const mesh = scene.getObjectByName( 'meshKnot' );
+    mesh.rotation.y = time / 1000;
+
+    renderer.render( scene, camera );
+
+}
